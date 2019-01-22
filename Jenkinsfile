@@ -1,25 +1,37 @@
-  node{
-   stage('SCM Checkout'){
-     git 'https://github.com/javahometech/my-app'
+node {
+   stage('SCM CheckOut'){
+      
+       git credentialsId: '0af3239f-f8a4-4d22-9ea7-b583b599e472', url: 'https://github.com/kethireddysudhakar/RCPOC'
+   
+       
    }
-   stage('Compile-Package'){
-    
-      def mvnHome =  tool name: 'maven-3', type: 'maven'   
-      sh "${mvnHome}/bin/mvn package"
-   }
-   stage('Email Notification'){
-      mail bcc: '', body: '''Hi Welcome to jenkins email alerts
-      Thanks
-      Hari''', cc: '', from: '', replyTo: '', subject: 'Jenkins Job', to: 'hari.kammana@gmail.com'
-   }
-   stage('Slack Notification'){
-       slackSend baseUrl: 'https://hooks.slack.com/services/',
-       channel: '#jenkins-pipeline-demo',
-       color: 'good', 
-       message: 'Welcome to Jenkins, Slack!', 
-       teamDomain: 'javahomecloud',
-       tokenCredentialId: 'slack-demo'
-   }
-}
 
+    stage('MVN Package'){
+        def mvnHome= tool name: 'POCMaven', type: 'maven'
+        def mvncmd="${mvnHome}/bin/mvn"
+        bat label: '', script: "${mvncmd} clean package"
+    }
+    
+    stage('Docker Build Image'){
+        
+       bat 'docker build -t sudhakarkethireddy/testpoc:2.0 .'
+    }
+    
+     stage('Docker Push Image'){
+         
+         withCredentials([string(credentialsId: 'dockerpwd', variable: 'dockerPwd')]) {
+            // some block
+            
+              bat "docker login -u sudhakarkethireddy -p  ${dockerPwd}"
+         }
+        
+      
+       bat 'docker push sudhakarkethireddy/testpoc:2.0'
+    }
+    
+    stage('Run Docker Container'){
+        bat 'docker run -p 8081:8080 -d --name testpoc sudhakarkethireddy/testpoc:2.0'
+    }
+    
+}
 
